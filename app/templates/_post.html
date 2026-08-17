@@ -1,6 +1,48 @@
-<table>
-    <tr valign="top">
-        <td><img src="{{ post.author.avatar(36) }}"></td>
-        <td>{{ post.author.username }} says:<br>{{ post.body }}</td>
-    </tr>
-</table>
+<article class="post-card">
+    <div class="post-meta">
+        <img src="{{ post.author.avatar(40) }}" class="post-avatar" alt="{{ post.author.username }}">
+        <div>
+            <div class="post-author">
+                <a href="{{ url_for('user', username=post.author.username) }}"
+                   style="color:var(--text-primary);">{{ post.author.username }}</a>
+            </div>
+            <div class="post-date">{{ post.timestamp.strftime('%B %d, %Y') }}</div>
+        </div>
+    </div>
+
+    <div class="post-body">
+        {% if post.title %}
+        <h3 class="post-title">
+            <a href="{{ url_for('post_detail', post_id=post.id) }}">{{ post.title }}</a>
+        </h3>
+        {% endif %}
+
+        <p class="post-preview">{{ post.body | strip_markdown(200) }}</p>
+
+        <div class="post-footer">
+            <!-- Tags -->
+            {% for tag in post.tags %}
+            <a href="{{ url_for('tag', name=tag.name) }}" class="tag-pill">#{{ tag.name }}</a>
+            {% endfor %}
+
+            <!-- Stats -->
+            <span class="post-stat" title="Views">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                {{ post.view_count }}
+            </span>
+            <span class="post-stat" title="Comments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {{ post.comments_count() }}
+            </span>
+
+            <a href="{{ url_for('post_detail', post_id=post.id) }}"
+               style="font-size:.8rem;font-weight:600;color:var(--primary);margin-left:auto;">
+               Read more →
+            </a>
+        </div>
+    </div>
+</article>

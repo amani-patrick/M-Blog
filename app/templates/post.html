@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="post-detail">
+
+    <!-- ── Post header ──────────────────────────────────────── -->
+    <header class="post-detail-header">
+        <!-- Author meta -->
+        <div class="post-meta" style="margin-bottom:1.5rem;">
+            <img src="{{ post.author.avatar(48) }}" class="post-avatar" style="width:48px;height:48px;" alt="{{ post.author.username }}">
+            <div>
+                <div class="post-author">
+                    <a href="{{ url_for('user', username=post.author.username) }}"
+                       style="color:var(--text-primary);">{{ post.author.username }}</a>
+                </div>
+                <div class="post-date">
+                    {{ post.timestamp.strftime('%B %d, %Y') }}
+                    &nbsp;·&nbsp;
+                    <span title="Views">👁 {{ post.view_count }}</span>
+                    &nbsp;·&nbsp;
+                    <span title="Comments">💬 {{ comments | length }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Title -->
+        {% if post.title %}
+        <h1 class="post-detail-title">{{ post.title }}</h1>
+        {% endif %}
+
+        <!-- Tags -->
+        {% if post.tags %}
+        <div class="tag-pills-row" style="margin:1rem 0;">
+            {% for tag in post.tags %}
+            <a href="{{ url_for('tag', name=tag.name) }}" class="tag-pill">#{{ tag.name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- ── Rendered markdown body ───────────────────────────── -->
+    <div class="post-detail-body">
+        {{ post.body | markdown | safe }}
+    </div>
+
+    <!-- ── Comments section ─────────────────────────────────── -->
+    <section class="comments-section" aria-label="Comments">
+        <h2 class="comments-title">
+            💬 {{ comments | length }} Comment{{ 's' if comments | length != 1 else '' }}
+        </h2>
+
+        <!-- Comment form -->
+        {% if current_user.is_authenticated %}
+        <div class="comment-form-wrap">
+            <div style="display:flex;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;">
+                <img src="{{ current_user.avatar(34) }}" class="comment-avatar" alt="{{ current_user.username }}">
+                <span style="font-weight:600;font-size:.875rem;padding-top:.15rem;">{{ current_user.username }}</span>
+            </div>
+            <form action="{{ url_for('add_comment', post_id=post.id) }}" method="post" id="comment-form">
+                {{ comment_form.hidden_tag() }}
+                {{ comment_form.body(placeholder="Share your thoughts…", id="comment-body") }}
+                {% for error in comment_form.body.errors %}
+                <span class="form-error">{{ error }}</span>
+                {% endfor %}
+                <button type="submit" class="btn-primary" id="comment-submit">Post Comment</button>
+            </form>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:.9rem;">
+            <a href="{{ url_for('login') }}" class="btn-primary">Sign in to comment</a>
+        </div>
+        {% endif %}
+
+        <!-- Comment list -->
+        {% if comments %}
+        <div id="comment-list">
+            {% for comment in comments %}
+            <div class="comment" id="comment-{{ comment.id }}">
+                <img src="{{ comment.author.avatar(34) }}" class="comment-avatar" alt="{{ comment.author.username }}">
+                <div class="comment-body-wrap">
+                    <div class="comment-meta">
+                        <a href="{{ url_for('user', username=comment.author.username) }}" class="comment-author"
+                           style="color:var(--text-primary);">{{ comment.author.username }}</a>
+                        <span class="comment-date">{{ comment.timestamp.strftime('%b %d, %Y · %H:%M') }}</span>
+                        {% if current_user.is_authenticated and (comment.author == current_user or current_user.is_admin) %}
+                        <form action="{{ url_for('delete_comment', post_id=post.id, comment_id=comment.id) }}"
+                              method="post" style="margin-left:auto;">
+                            {{ comment_form.hidden_tag() }}
+                            <button type="submit" class="btn-danger" style="padding:.2rem .5rem;font-size:.7rem;"
+                                    onclick="return confirm('Delete this comment?')">Delete</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <p class="comment-body">{{ comment.body }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+            No comments yet. Be the first!
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+
+<!-- Back to feed -->
+<div style="max-width:720px;margin:2rem auto 0;">
+    <a href="{{ url_for('index') }}" style="font-size:.875rem;color:var(--text-secondary);">← Back to stories</a>
+</div>
+{% endblock %}

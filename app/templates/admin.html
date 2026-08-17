@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="admin-header">
+    <h1>⚙️ Admin Dashboard</h1>
+    <p style="color:var(--text-secondary);font-size:.9rem;">
+        Platform overview as of {{ now.strftime('%B %d, %Y') if now else 'today' }}
+    </p>
+</div>
+
+<!-- ── Stats cards ─────────────────────────────────────────────── -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card-value">{{ stats.users }}</div>
+        <div class="stat-card-label">👤 Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-value">{{ stats.posts }}</div>
+        <div class="stat-card-label">📝 Total Posts</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-value">{{ stats.comments }}</div>
+        <div class="stat-card-label">💬 Total Comments</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-value">{{ stats.tags }}</div>
+        <div class="stat-card-label">🏷️ Total Tags</div>
+    </div>
+</div>
+
+<!-- ── Top posts ───────────────────────────────────────────────── -->
+<div class="admin-section">
+    <div class="admin-section-title">🔥 Top Posts by Views</div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Views</th>
+                    <th>Comments</th>
+                    <th>Tags</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_posts %}
+                <tr>
+                    <td style="color:var(--text-muted);">{{ loop.index }}</td>
+                    <td>
+                        <a href="{{ url_for('post_detail', post_id=post.id) }}"
+                           style="font-weight:600;color:var(--text-primary);">
+                            {{ post.title or '(Untitled)' | truncate(50) }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('user', username=post.author.username) }}">
+                            {{ post.author.username }}
+                        </a>
+                    </td>
+                    <td><strong>{{ post.view_count }}</strong></td>
+                    <td>{{ post.comments_count() }}</td>
+                    <td>
+                        {% for t in post.tags[:3] %}
+                        <span class="tag-pill" style="font-size:.7rem;">#{{ t.name }}</span>
+                        {% endfor %}
+                    </td>
+                    <td style="color:var(--text-muted);">{{ post.timestamp.strftime('%b %d, %Y') }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">No posts yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── Audit log ───────────────────────────────────────────────── -->
+<div class="admin-section">
+    <div class="admin-section-title">🔍 Recent Audit Log</div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>IP Address</th>
+                    <th>User Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td style="color:var(--text-muted);white-space:nowrap;">
+                        {{ log.timestamp.strftime('%b %d %H:%M:%S') }}
+                    </td>
+                    <td>{{ log.username or '—' }}</td>
+                    <td>
+                        {% set action_class = 'login' if 'login' in log.action and 'failed' not in log.action
+                            else 'logout' if 'logout' in log.action
+                            else 'register' if 'register' in log.action
+                            else 'failed' if 'failed' in log.action
+                            else '' %}
+                        <span class="action-badge {{ action_class }}">{{ log.action }}</span>
+                    </td>
+                    <td style="font-family:monospace;font-size:.8rem;">{{ log.ip_address or '—' }}</td>
+                    <td style="font-size:.75rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        title="{{ log.user_agent }}">{{ log.user_agent or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No audit events yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── API info ────────────────────────────────────────────────── -->
+<div class="admin-section">
+    <div class="admin-section-title">🌐 REST API Endpoints</div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th><th>Rate Limit</th></tr></thead>
+            <tbody>
+                <tr><td><code>GET</code></td><td><code>/api/v1/posts</code></td><td>List all posts (paginated)</td><td>None</td><td>60/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/posts/&lt;id&gt;</code></td><td>Single post</td><td>None</td><td>60/min</td></tr>
+                <tr><td><code>POST</code></td><td><code>/api/v1/posts</code></td><td>Create post</td><td>Bearer API key</td><td>10/min</td></tr>
+                <tr><td><code>DELETE</code></td><td><code>/api/v1/posts/&lt;id&gt;</code></td><td>Delete post</td><td>Bearer API key</td><td>5/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/search?q=</code></td><td>Full-text search</td><td>None</td><td>30/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/users/&lt;username&gt;</code></td><td>User profile</td><td>None</td><td>60/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/notifications</code></td><td>Unread notifications</td><td>Bearer API key</td><td>60/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/tags</code></td><td>All tags</td><td>None</td><td>60/min</td></tr>
+                <tr><td><code>GET</code></td><td><code>/api/v1/health</code></td><td>Health check</td><td>None</td><td>Exempt</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

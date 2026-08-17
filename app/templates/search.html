@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="search-header">
+    <h1>Search Results {% if q %}<span style="color:var(--text-muted);font-size:1rem;">for "{{ q }}"</span>{% endif %}</h1>
+    {% if q %}
+    <p class="search-meta">{{ total }} result{{ 's' if total != 1 else '' }} found</p>
+    {% endif %}
+</div>
+
+<!-- Search input -->
+<div style="max-width:800px;margin:0 auto 2rem;">
+    <form action="{{ url_for('search') }}" method="get" class="search-input-row">
+        <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            placeholder="Search stories, titles, content…"
+            class="form-control"
+            id="search-q"
+            autofocus
+        >
+        <button type="submit" class="btn-primary">Search</button>
+    </form>
+</div>
+
+<!-- Results -->
+{% if posts %}
+    <div id="posts-container">
+        {% for post in posts %}
+            {% include '_post.html' %}
+        {% endfor %}
+    </div>
+
+    <div class="pagination">
+        {% if prev_url %}<a href="{{ prev_url }}">← Newer</a>{% endif %}
+        {% if next_url %}<a href="{{ next_url }}">Older →</a>{% endif %}
+    </div>
+{% elif q %}
+    <div class="no-results">
+        <div class="no-results-icon">🔍</div>
+        <p>No stories found for <strong>"{{ q }}"</strong>.</p>
+        <p style="margin-top:.5rem;font-size:.875rem;">Try different keywords or browse <a href="{{ url_for('index') }}">all stories</a>.</p>
+    </div>
+{% else %}
+    <div class="no-results">
+        <div class="no-results-icon">✍️</div>
+        <p>Enter a search term above to find stories.</p>
+    </div>
+{% endif %}
+{% endblock %}

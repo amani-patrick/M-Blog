@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="feed-header">
+    <h2 style="display:flex;align-items:center;gap:.5rem;">
+        <span class="tag-pill active" style="font-size:1rem;padding:.4rem .9rem;">#{{ tag.name }}</span>
+        posts
+    </h2>
+</div>
+
+<div id="posts-container">
+    {% for post in posts %}
+        {% include '_post.html' %}
+    {% endfor %}
+    {% if not posts %}
+    <div style="max-width:800px;margin:4rem auto;text-align:center;color:var(--text-muted);">
+        No stories tagged <strong>#{{ tag.name }}</strong> yet.
+    </div>
+    {% endif %}
+</div>
+
+<div class="pagination">
+    {% if prev_url %}<a href="{{ prev_url }}">← Newer</a>{% endif %}
+    {% if next_url %}<a href="{{ next_url }}">Older →</a>{% endif %}
+</div>
+{% endblock %}

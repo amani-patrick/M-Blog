@@ -1,5 +1,16 @@
-{% extends "base.html %"}
+{% extends "base.html" %}
+
 {% block content %}
-<h1>Unexpected error occured</h1>
-<p>!! The admnistrator  has been notified. Sorry for the inconvenience !! </p>
+<div class="error-container">
+    <div class="error-code">500</div>
+    <h1 class="error-title">Unexpected error occured</h1>
+    <p class="error-message">Our systems have encountered an unexpected disturbance. The prose you seek is currently unavailable as we work to restore clarity to the servers.</p>
+    
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('index') }}" class="btn-primary" style="margin-right: 1rem;">Refresh Page</a>
+        <a href="#" class="btn-secondary">Contact Support</a>
+    </div>
+    
+    <a href="{{ url_for('index') }}" style="font-size: 0.9rem;">← Return to the Homepage</a>
+</div>
 {% endblock %}

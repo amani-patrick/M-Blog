@@ -1,12 +1,202 @@
 {% extends "base.html" %}
 
 {% block content %}
-   {% if not user.username %}
-   <h2>Hello ,How are you doing today</h2> 
-   {% else %}
-    <h1>Hi, {{ user.username }}!</h1>
-    {% endif %}
-    {% for post in posts %}
-    <div><p>{{ post.author.username }} says: <b>{{ post.body }}</b></p></div>
+<!-- ── Write section ──────────────────────────────────────────── -->
+{% if current_user.is_authenticated and form %}
+<!-- Toast UI CSS -->
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.min.css" />
+
+<div class="write-section" id="write-section">
+    <div class="write-header">
+        <span>Draft in Progress</span>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('post-form').reset();if(window.editor){window.editor.setMarkdown('');}">Discard</button>
+            <button type="button" class="btn-primary" onclick="if(window.editor) { document.getElementById('post-body').value = window.editor.getMarkdown(); } document.getElementById('post-form').submit()">Publish →</button>
+        </div>
+    </div>
+
+    <form action="" method="post" id="post-form">
+        {{ form.hidden_tag() }}
+
+        <!-- Title field -->
+        <div style="margin-bottom:.75rem;">
+            {{ form.title(class="write-input", placeholder="Your story title…", id="post-title") }}
+            {% for error in form.title.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- Toast UI Editor Container -->
+        <div id="editor-container" style="margin-bottom: 1rem; text-align: left; font-family: var(--font-sans);"></div>
+        
+        <div style="display:none;">
+            {{ form.body(id="post-body") }}
+        </div>
+        {% for error in form.body.errors %}
+        <span class="form-error" style="margin-top:-.5rem;margin-bottom:1rem;display:block;">{{ error }}</span>
+        {% endfor %}
+
+        <!-- Tags -->
+        <div>
+            {{ form.tags(class="write-tags-input", placeholder="🏷️ Tags: python, flask, webdev (comma-separated)", id="post-tags") }}
+            {% for error in form.tags.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- ── Tag filter bar ─────────────────────────────────────────── -->
+{% if all_tags %}
+<div class="tag-pills-row" id="tag-filter-row">
+    <a href="{{ url_for('index') }}"
+       class="tag-pill {% if not tag_filter %}active{% endif %}"
+       aria-label="Show all posts">All</a>
+    {% for t in all_tags %}
+    <a href="{{ url_for('index', tag=t.name) }}"
+       class="tag-pill {% if tag_filter == t.name %}active{% endif %}"
+       aria-label="Filter by {{ t.name }}">#{{ t.name }}</a>
     {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Feed header ────────────────────────────────────────────── -->
+<div class="feed-header">
+    <h2>
+        {% if tag_filter %}#{{ tag_filter }} stories{% else %}Latest Stories{% endif %}
+    </h2>
+</div>
+
+<!-- ── Posts ─────────────────────────────────────────────────── -->
+<div id="posts-container">
+    {% for post in posts %}
+        {% include '_post.html' %}
+    {% endfor %}
+
+    {% if not posts %}
+    <div style="max-width:800px;margin:4rem auto;text-align:center;color:var(--text-muted);">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📭</div>
+        <p>No stories yet. {% if current_user.is_authenticated %}Be the first to publish!{% else %}<a href="{{ url_for('login') }}">Sign in</a> to post.{% endif %}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Infinite scroll sentinel ───────────────────────────────── -->
+{% if next_url %}
+<div class="load-more-sentinel" id="load-more" data-next="{{ next_url }}" data-tag="{{ tag_filter }}">
+    <span class="spinner"></span> Loading more…
+</div>
+{% else %}
+<div class="pagination">
+    {% if prev_url %}<a href="{{ prev_url }}">← Newer</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<!-- Toast UI Editor JS -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script>
+// ── Toast UI Editor ────────────────────────────────────────────
+(function initEditor() {
+    const el = document.getElementById('editor-container');
+    if (!el) return;
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    window.editor = new toastui.Editor({
+        el: el,
+        height: '400px',
+        initialEditType: 'wysiwyg',
+        previewStyle: 'vertical',
+        theme: isDark ? 'dark' : 'light',
+        initialValue: document.getElementById('post-body').value || '',
+        placeholder: 'Tell your story…'
+    });
+
+    // Update hidden textarea on submit
+    document.getElementById('post-form').addEventListener('submit', function() {
+        document.getElementById('post-body').value = window.editor.getMarkdown();
+    });
+
+    // Recreate editor if theme changes
+    const observer = new MutationObserver(() => {
+        if (!window.editor) return;
+        const val = window.editor.getMarkdown();
+        window.editor.destroy();
+        window.editor = null;
+        initEditor();
+        if (window.editor) window.editor.setMarkdown(val);
+    });
+    observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+})();
+
+// ── Infinite scroll ────────────────────────────────────────────
+const sentinel = document.getElementById('load-more');
+if (sentinel) {
+    const observer = new IntersectionObserver(async (entries) => {
+        if (!entries[0].isIntersecting) return;
+        observer.unobserve(sentinel);
+
+        const nextUrl = sentinel.dataset.next;
+        if (!nextUrl) return;
+
+        try {
+            const res = await fetch(nextUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const data = await res.json();
+            const container = document.getElementById('posts-container');
+
+            data.posts.forEach(post => {
+                const el = document.createElement('article');
+                el.className = 'post-card';
+                el.innerHTML = `
+                    <div class="post-meta">
+                        <img src="${post.author_avatar}" class="post-avatar" alt="${post.author}">
+                        <div>
+                            <div class="post-author">
+                                <a href="/user/${post.author}" style="color:var(--text-primary);">${post.author}</a>
+                            </div>
+                            <div class="post-date">${formatDate(post.timestamp)}</div>
+                        </div>
+                    </div>
+                    <div class="post-body">
+                        ${post.title ? `<h3 class="post-title"><a href="/post/${post.id}">${escHtml(post.title)}</a></h3>` : ''}
+                        <p class="post-preview">${escHtml(post.body.substring(0, 200))}${post.body.length > 200 ? '…' : ''}</p>
+                        <div class="post-footer">
+                            ${post.tags.map(t => `<a href="/tag/${t}" class="tag-pill">#${t}</a>`).join('')}
+                            <span class="post-stat">👁 ${post.view_count}</span>
+                            <span class="post-stat">💬 ${post.comments_count}</span>
+                            <a href="/post/${post.id}" style="font-size:.8rem;font-weight:600;color:var(--primary);margin-left:auto;">Read more →</a>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+
+            if (data.has_next) {
+                const tagParam = sentinel.dataset.tag ? `&tag=${sentinel.dataset.tag}` : '';
+                sentinel.dataset.next = `/index?page=${data.next_page}${tagParam}`;
+                observer.observe(sentinel);
+            } else {
+                sentinel.remove();
+            }
+        } catch(e) {
+            sentinel.innerHTML = '<a href="' + sentinel.dataset.next + '" class="btn-secondary">Load more</a>';
+        }
+    }, { rootMargin: '200px' });
+
+    observer.observe(sentinel);
+}
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+function formatDate(iso) {
+    try { return new Date(iso).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); }
+    catch { return ''; }
+}
+</script>
 {% endblock %}

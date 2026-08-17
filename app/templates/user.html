@@ -1,21 +1,178 @@
 {% extends 'base.html' %}
 {% block content %}
-<table>
-    <tr valign="top">
-        <td><img src="{{ user.avatar(128) }}"></td>
-        <td>
-          <h1>User: {{ user.username }}</h1>
-          {% if user.about_me %} <p>{{user.about_me}}</p>{% endif %}
-          {% if user.last_seen %} <p>Last seen{{user.last_seen}}</p> {% endif %}
-          {% if user == current_user %}
-           <p><a href="{{ url_for('edit_profile') }}">Edit your profile</a></p>
-          {% endif %}
-        
-        </td>
-    </tr>
-</table>
-   <h1>User: {{user.username}}</h1><hr>
-   {% for post in posts %}
-     {% include '_post.html' %}
-   {% endfor %}
-|{% endblock %}
+
+<!-- ── Profile header ─────────────────────────────────────────── -->
+<div class="profile-header">
+    <img src="{{ user.avatar(100) }}" class="profile-avatar" alt="{{ user.username }} avatar">
+    <h1 class="profile-name">{{ user.username }}</h1>
+
+    {% if user.about_me %}
+    <p class="profile-bio">{{ user.about_me }}</p>
+    {% endif %}
+
+    {% if user.last_seen %}
+    <p style="font-size:.8rem;color:var(--text-muted);">
+        Last seen {{ user.last_seen.strftime('%B %d, %Y at %H:%M') }} UTC
+    </p>
+    {% endif %}
+
+    <div class="profile-stats">
+        <div class="profile-stat">
+            <span>{{ user.followers_count() }}</span>
+            Followers
+        </div>
+        <div class="profile-stat">
+            <span>{{ user.following_count() }}</span>
+            Following
+        </div>
+        <div class="profile-stat">
+            <span id="post-count">…</span>
+            Posts
+        </div>
+    </div>
+
+    <div class="profile-actions">
+        {% if user == current_user %}
+            <a href="{{ url_for('edit_profile') }}" class="btn-secondary">✏️ Edit Profile</a>
+            <!-- API key generation — reuse EmptyForm's hidden tag for CSRF -->
+            <form action="{{ url_for('generate_api_key') }}" method="post" style="display:inline;">
+                {{ form.hidden_tag() }}
+                <button type="submit" class="btn-secondary" title="Generate / Regenerate your REST API key">🔑 API Key</button>
+            </form>
+        {% elif not current_user.is_authenticated %}
+            <a href="{{ url_for('login') }}" class="btn-primary">Follow</a>
+        {% elif not current_user.is_following(user) %}
+            <form action="{{ url_for('follow', username=user.username) }}" method="post" style="display:inline;">
+                {{ form.hidden_tag() }}
+                {{ form.submit(value='Follow', class="btn-primary") }}
+            </form>
+        {% else %}
+            <form action="{{ url_for('unfollow', username=user.username) }}" method="post" style="display:inline;">
+                {{ form.hidden_tag() }}
+                {{ form.submit(value='Unfollow', class="btn-secondary") }}
+            </form>
+        {% endif %}
+    </div>
+
+    {% if user.github_id %}
+    <p style="margin-top:.75rem;font-size:.8rem;color:var(--text-muted);">
+        🐙 Connected via GitHub
+    </p>
+    {% endif %}
+</div>
+
+<!-- ── Activity heatmap ───────────────────────────────────────── -->
+<div class="heatmap-section">
+    <div class="heatmap-title">📅 Writing Activity — Last 52 Weeks</div>
+    <div class="heatmap-canvas-wrap">
+        <canvas id="heatmap-canvas"></canvas>
+        <div class="heatmap-legend">
+            Less
+            <div class="heatmap-legend-cell" style="background:#ebedf0;"></div>
+            <div class="heatmap-legend-cell" style="background:#bfdbfe;"></div>
+            <div class="heatmap-legend-cell" style="background:#60a5fa;"></div>
+            <div class="heatmap-legend-cell" style="background:#2563eb;"></div>
+            <div class="heatmap-legend-cell" style="background:#1e40af;"></div>
+            More
+        </div>
+    </div>
+</div>
+
+<!-- ── Stories by user ───────────────────────────────────────── -->
+<div class="feed-header">
+    <h2>Stories by {{ user.username }}</h2>
+</div>
+
+<div id="posts-container">
+    {% for post in posts %}
+        {% include '_post.html' %}
+    {% endfor %}
+    {% if not posts %}
+    <div style="max-width:800px;margin:3rem auto;text-align:center;color:var(--text-muted);">
+        No stories published yet.
+    </div>
+    {% endif %}
+</div>
+
+<div class="pagination">
+    {% if prev_url %}<a href="{{ prev_url }}">← Newer</a>{% endif %}
+    {% if next_url %}<a href="{{ next_url }}">Older →</a>{% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Pass server-generated activity data to JS
+const activityData = {{ activity_data | safe }};
+
+(function renderHeatmap() {
+    const canvas = document.getElementById('heatmap-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cell = 13, gap = 2, weeks = 52, days = 7;
+    const w = weeks * (cell + gap);
+    const h = days * (cell + gap) + 20; // +20 for month labels
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    function getColor(count) {
+        if (count === 0) return isDark ? '#1e2535' : '#ebedf0';
+        if (count === 1) return '#bfdbfe';
+        if (count === 2) return '#93c5fd';
+        if (count <= 4) return '#60a5fa';
+        if (count <= 7) return '#2563eb';
+        return '#1e40af';
+    }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (weeks * 7 - 1));
+
+    // Draw month labels
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = isDark ? '#64748b' : '#9ca3af';
+    let lastMonth = -1;
+    for (let w = 0; w < weeks; w++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + w * 7);
+        if (d.getMonth() !== lastMonth) {
+            lastMonth = d.getMonth();
+            const monthStr = d.toLocaleDateString('en-US', {month:'short'});
+            ctx.fillText(monthStr, w * (cell + gap), 9);
+        }
+    }
+
+    // Draw cells
+    for (let wk = 0; wk < weeks; wk++) {
+        for (let dy = 0; dy < days; dy++) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + wk * 7 + dy);
+            if (date > today) continue;
+            const dateStr = date.toISOString().split('T')[0];
+            const count = activityData[dateStr] || 0;
+            const x = wk * (cell + gap);
+            const y = 14 + dy * (cell + gap); // 14 = space for month labels
+            ctx.fillStyle = getColor(count);
+            ctx.beginPath();
+            ctx.roundRect(x, y, cell, cell, 2);
+            ctx.fill();
+        }
+    }
+
+    // Update post count
+    const totalPosts = Object.values(activityData).reduce((a, b) => a + b, 0);
+    const el = document.getElementById('post-count');
+    if (el) el.textContent = totalPosts;
+
+    // Redraw when theme changes
+    const observer = new MutationObserver(renderHeatmap);
+    observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+})();
+</script>
+{% endblock %}

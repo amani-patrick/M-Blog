@@ -1,0 +1,154 @@
+2026-08-16 15:56:17,420 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 15:57:45,798 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 15:57:50,239 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 15:59:11,011 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:22:58,881 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:24:45,090 ERROR [in /home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: followers
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/amani/Documents/2026/M-Blog/app/routes.py", line 39, in index
+    posts = db.paginate(current_user.following_posts(), page=page,
+                        per_page=app.config.get('POSTS_PER_PAGE', 10), error_out=False)
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask_sqlalchemy/extension.py", line 839, in paginate
+    return SelectPagination(
+        select=select,
+    ...<5 lines>...
+        count=count,
+    )
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask_sqlalchemy/pagination.py", line 339, in _query_items
+    return list(session.execute(select).unique().scalars())
+                ~~~~~~~~~~~~~~~^^^^^^^^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: followers
+[SQL: SELECT post.id, post.body, post.timestamp, post.user_id 
+FROM post JOIN user AS user_1 ON user_1.id = post.user_id LEFT OUTER JOIN (followers AS followers_1 JOIN user AS user_2 ON followers_1.follower_id = user_2.id) ON followers_1.followed_id = user_1.id 
+WHERE user_2.id = ? OR user_1.id = ? GROUP BY post.id, post.body, post.timestamp, post.user_id ORDER BY post.timestamp DESC
+ LIMIT ? OFFSET ?]
+[parameters: (2, 2, 10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-16 16:26:34,926 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:26:35,624 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:28:43,737 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:30:07,190 ERROR [in /home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/amani/Documents/2026/M-Blog/venv/lib/python3.13/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/amani/Documents/2026/M-Blog/app/routes.py", line 56, in user
+    query = user.posts.select().order_by(Post.timestamp.desc())
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'Post' object has no attribute 'select'
+2026-08-16 16:42:28,860 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-16 16:42:29,866 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:42]
+2026-08-17 07:39:03,912 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 07:39:29,210 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 07:39:44,894 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 07:51:44,076 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 07:52:55,668 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 10:21:51,240 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]
+2026-08-17 10:23:10,397 INFO [in /home/amani/Documents/2026/M-Blog/app/__init__.py:89]

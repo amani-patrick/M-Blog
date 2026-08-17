@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>File Not Found</h1>
-<p><a href="{{url_for('index')}}">Return Home</a></p>
+<div class="error-container">
+    <div class="error-code">404</div>
+    <h1 class="error-title">Page not found</h1>
+    <p class="error-message">The page you are looking for might have been removed, had its name changed, or is temporarily unavailable. Let's get you back on track.</p>
+    
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('index') }}" class="btn-primary" style="margin-right: 1rem;">Back to Home</a>
+        <a href="{{ url_for('index') }}" class="btn-secondary">Search</a>
+    </div>
+    
+    <p style="font-size: 0.9rem; color: var(--text-secondary);">Are you looking for something specific?</p>
+    <div class="nav-links" style="justify-content: center; margin-top: 1rem;">
+        <a href="{{ url_for('index') }}">Stories</a>
+        <a href="{{ url_for('index') }}">Write</a>
+        <a href="#">About</a>
+    </div>
+</div>
 {% endblock %}

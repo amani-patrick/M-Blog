@@ -1,33 +1,268 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% if title %}
-    <title>{{ title }} - Microblog</title>
+    <title>{{ title }} — M-Blog</title>
+    <meta name="description" content="M-Blog — {{ title }}">
     {% else %}
-    <title>Welcome to Microblog</title>
+    <title>M-Blog · Stories</title>
+    <meta name="description" content="M-Blog — a modern microblogging platform built with Flask.">
     {% endif %}
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div>Microblog: 
-        <a href="{{url_for('index')}}">Home</a>
-        {% if current_user.is_anonymous %}
-        <a href="{{url_for('login')}}">Login</a>
-        {% else %}
-        <a href="{{ url_for('user', username=current_user.username) }}">Profile</a>
-        <a href="{{url_for('logout')}}">Logout</a>
-        {% endif %}
-    </div><hr>
-    {% with messages=get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li>{{message}}</li>
-        {% endfor %}
-    </ul>
+    <!-- ── Navbar ──────────────────────────────────────────── -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}" class="brand">M-Blog</a>
+
+        <!-- Live search -->
+        <div class="nav-center">
+            <div class="nav-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input
+                    type="text"
+                    id="nav-search"
+                    class="nav-search-input"
+                    placeholder="Search stories…"
+                    autocomplete="off"
+                    aria-label="Search posts"
+                >
+                <div class="search-dropdown" id="search-dropdown" role="listbox"></div>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Stories</a>
+
+            {% if current_user.is_authenticated %}
+                <!-- Notification bell -->
+                <div
+                    class="notif-bell"
+                    id="notif-bell"
+                    role="button"
+                    aria-label="Notifications"
+                    onclick="toggleNotifDropdown(event)"
+                >
+                    🔔
+                    <span class="notif-badge" id="notif-badge"></span>
+                </div>
+
+                <a href="{{ url_for('user', username=current_user.username) }}"
+                   class="{% if request.endpoint == 'user' %}active{% endif %}">Profile</a>
+
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}">Admin</a>
+                {% endif %}
+
+                <a href="{{ url_for('logout') }}" class="btn-secondary">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn-primary">Sign In</a>
+            {% endif %}
+
+            <!-- Dark mode toggle -->
+            <button class="dark-toggle" id="dark-toggle" onclick="toggleDark()" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <span id="dark-icon">🌙</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Notification dropdown (fixed, outside navbar flow) -->
+    {% if current_user.is_authenticated %}
+    <div class="notif-dropdown" id="notif-dropdown">
+        <div class="notif-dropdown-header">
+            Notifications
+            <button onclick="markAllRead()" style="font-size:.75rem;background:none;border:none;color:var(--primary);cursor:pointer;font-weight:600;">Mark all read</button>
+        </div>
+        <div id="notif-list">
+            <div class="notif-dropdown-empty">No new notifications</div>
+        </div>
+    </div>
     {% endif %}
-    {% endwith %}
-    {% block content %}{% endblock %}    
+
+    <!-- ── Main content ────────────────────────────────────── -->
+    <main class="container" id="main-content">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class="flashes" role="alert">
+            {% for message in messages %}
+            <li class="flash">💬 {{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ── Scripts ────────────────────────────────────────── -->
+    <script>
+    // ── Dark mode ──────────────────────────────────────────────
+    (function() {
+        const saved = localStorage.getItem('mblog-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        updateDarkIcon(saved);
+    })();
+
+    function toggleDark() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? '' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('mblog-theme', next);
+        updateDarkIcon(next);
+    }
+
+    function updateDarkIcon(theme) {
+        const el = document.getElementById('dark-icon');
+        if (el) el.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ── Live search ────────────────────────────────────────────
+    let searchTimer;
+    const searchInput = document.getElementById('nav-search');
+    const searchDropdown = document.getElementById('search-dropdown');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimer);
+            const q = this.value.trim();
+            if (q.length < 2) {
+                searchDropdown.classList.remove('show');
+                return;
+            }
+            searchTimer = setTimeout(() => fetchSearch(q), 300);
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.location.href = '/search?q=' + encodeURIComponent(this.value.trim());
+            }
+            if (e.key === 'Escape') {
+                searchDropdown.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.nav-search-wrap')) {
+                searchDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    function fetchSearch(q) {
+        fetch('/api/v1/search?q=' + encodeURIComponent(q) + '&per_page=5')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.posts || data.posts.length === 0) {
+                    searchDropdown.innerHTML = '<div class="search-dropdown-empty">No results for "' + q + '"</div>';
+                } else {
+                    searchDropdown.innerHTML = data.posts.map(p => `
+                        <a class="search-dropdown-item" href="/post/${p.id}">
+                            <img src="${p.author_avatar}" width="28" height="28" style="border-radius:50%;flex-shrink:0;" alt="${p.author}">
+                            <div>
+                                <div class="search-dropdown-title">${escHtml(p.title || 'Untitled')}</div>
+                                <div class="search-dropdown-meta">by ${escHtml(p.author)} · ${formatDate(p.timestamp)}</div>
+                            </div>
+                        </a>
+                    `).join('') + `<a class="search-dropdown-item" href="/search?q=${encodeURIComponent(q)}" style="justify-content:center;color:var(--primary);font-weight:600;font-size:.8rem;">See all results →</a>`;
+                }
+                searchDropdown.classList.add('show');
+            })
+            .catch(() => searchDropdown.classList.remove('show'));
+    }
+
+    function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+    }
+    function formatDate(iso) {
+        try { return new Date(iso).toLocaleDateString('en-US', {month:'short', day:'numeric'}); }
+        catch { return ''; }
+    }
+
+    // ── Notifications & SSE ────────────────────────────────────
+    {% if current_user.is_authenticated %}
+    let notifDropdownOpen = false;
+    let unreadCount = 0;
+    const notifBadge = document.getElementById('notif-badge');
+    const notifList = document.getElementById('notif-list');
+    const notifDropdown = document.getElementById('notif-dropdown');
+
+    function toggleNotifDropdown(e) {
+        e.stopPropagation();
+        notifDropdownOpen = !notifDropdownOpen;
+        notifDropdown.classList.toggle('show', notifDropdownOpen);
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#notif-bell') && !e.target.closest('#notif-dropdown')) {
+            notifDropdownOpen = false;
+            notifDropdown.classList.remove('show');
+        }
+    });
+
+    function updateNotifUI(notifs) {
+        if (notifs.length === 0) return;
+        unreadCount += notifs.length;
+        notifBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        notifBadge.classList.add('show');
+
+        const html = notifs.map(n => `
+            <div class="notif-dropdown-item">
+                <strong>${escHtml(n.type === 'follow' ? '👤' : '💬')}</strong> ${escHtml(n.message)}
+            </div>
+        `).join('');
+        if (notifList.querySelector('.notif-dropdown-empty')) {
+            notifList.innerHTML = html;
+        } else {
+            notifList.insertAdjacentHTML('afterbegin', html);
+        }
+    }
+
+    function markAllRead() {
+        fetch('/notifications/mark-read', {method:'POST', headers:{'X-CSRFToken': getCSRF()}})
+            .then(() => {
+                unreadCount = 0;
+                notifBadge.classList.remove('show');
+                notifList.innerHTML = '<div class="notif-dropdown-empty">No new notifications</div>';
+            });
+    }
+
+    function getCSRF() {
+        const m = document.cookie.match(/csrf_token=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    // SSE connection
+    function connectSSE() {
+        const evtSource = new EventSource('/stream');
+        evtSource.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.notifications && data.notifications.length > 0) {
+                    updateNotifUI(data.notifications);
+                }
+            } catch(err) {}
+        };
+        evtSource.onerror = function() {
+            evtSource.close();
+            // Auto-reconnect after 10 seconds
+            setTimeout(connectSSE, 10000);
+        };
+    }
+    connectSSE();
+    {% endif %}
+    </script>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>
