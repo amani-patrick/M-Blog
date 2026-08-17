@@ -208,7 +208,7 @@ def register():
         verify_url = url_for('verify_email', token=token, _external=True)
         # Print to console (swap for Flask-Mail send in production)
         print(f'\n[M-Blog] VERIFY EMAIL LINK for {user.email}:\n  {verify_url}\n')
-        flash('Account created! Check your email (or console) for the verification link.')
+        flash('Account created! Check your email for the verification link.')
         log_action('register', user)
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
